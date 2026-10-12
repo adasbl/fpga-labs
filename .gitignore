@@ -1,0 +1,27 @@
+# Vivado generated project directories
+.Xil/
+*.cache/
+*.runs/
+*.sim/
+*.hw/
+*.gen/
+*.ip_user_files/
+
+# Logs and temporary files
+*.log
+*.jou
+*.str
+*.pb
+*.bak
+*.backup.*
+
+# Generated simulation and implementation outputs
+*.wdb
+*.wdb.*
+*.dcp
+*.bit
+*.bin
+*.ltx
+*.rpt
+
+# Keep HDL sources, constraints, project files, Tcl scripts and .wcfg files.
