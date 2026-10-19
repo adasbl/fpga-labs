@@ -109,14 +109,42 @@ begin
         send_and_check(x"FF", BIT_NOM); -- Stare 53 nie moze zamaskowac braku odbioru.
         report "TEST 3: 53 przy 9984 bps (+4%)" severity note;
         send_and_check(x"53", BIT_FAST);
-        report "PASS: trzy predkosci UART, hex, reset i skanowanie 1 ms" severity note;
+
+        report "TEST 4: reset podczas odbioru FF, w polowie bitu D3" severity note;
+        wait for 137 ns;
+        rx <= '0'; wait for BIT_NOM; -- Bit startu.
+        -- Nadajnik kontynuuje ramke mimo resetu odbiornika.
+        -- Dane FF: po zwolnieniu resetu pozostale jedynki nie udaja startu.
+        for i in 0 to 7 loop
+            rx <= '1';
+            if i = 3 then
+                wait for BIT_NOM / 2;
+                rst <= '1'; wait for 1 ns;
+                assert an = "1111" and seg = x"FF"
+                    report "Reset podczas odbioru nie wygasil wyswietlacza"
+                    severity failure;
+                wait for 99 ns;
+                rst <= '0';
+                wait for BIT_NOM - BIT_NOM / 2 - 100 ns;
+            else
+                wait for BIT_NOM;
+            end if;
+        end loop;
+        rx <= '1'; wait for BIT_NOM; -- Bit stopu.
+        wait for 1 us;
+        check_display(x"00"); -- Przerwana ramka FF nie moze zostac zatwierdzona.
+
+        report "TEST 5: poprawny odbior A6 po resecie podczas transmisji" severity note;
+        send_and_check(x"A6", BIT_NOM);
+        report "PASS: trzy predkosci UART, hex, reset poczatkowy i podczas odbioru, skanowanie 1 ms"
+            severity note;
         done <= true;
         wait;
     end process;
 
     p_timeout : process
     begin
-        wait until done for 40 ms;
+        wait until done for 50 ms;
         assert done report "TIMEOUT" severity failure;
         wait;
     end process;
