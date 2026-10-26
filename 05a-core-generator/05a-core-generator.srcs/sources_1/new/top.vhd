@@ -201,14 +201,14 @@ begin
         end if;
     end process;
 
-    -- LD0 zapala sie po utracie znaku i gasnie po oproznieniu FIFO,
-    -- nawet gdy ostatnia pobrana linia jest nadal drukowana.
+    -- Jak w cw5a Christopha: LD0 zapala sie po utracie znaku
+    -- i gasnie, gdy FIFO przestaje byc pelne (zwalnia sie miejsce).
     p_overflow : process(clk_i)
     begin
         if rising_edge(clk_i) then
             if rx_valid = '1' and fifo_full = '1' then
                 overflow <= '1';
-            elsif fifo_empty = '1' then
+            elsif fifo_full = '0' then
                 overflow <= '0';
             end if;
         end if;

@@ -450,15 +450,15 @@ begin
             send_byte(rx, x"46", C_BIT); -- F: odrzucony, ale widoczny na LED7.
             wait for 2 * C_BIT;
             assert led = '1' report "Brak sygnalizacji przepelnienia FIFO" severity failure;
-            check_display(x"46");
-            wait until received = bytes_through(7) for C_TIMEOUT;
-            assert received = bytes_through(7) report "Nie wydrukowano linii przed ostatnia" severity failure;
-            assert led = '1' report "LD0 zgasla przed oproznieniem FIFO" severity failure;
-            -- Ostatnie 9 X i CR opuszczaja FIFO przed wydrukiem tej linii.
+            wait until received = bytes_through(4) for C_TIMEOUT;
+            assert received = bytes_through(4) report "Nie wydrukowano linii A" severity failure;
+            assert led = '1' report "LD0 zgasla przed zwolnieniem miejsca w FIFO" severity failure;
+            -- Po linii A pierwszy odczyt zwalnia miejsce w pelnym FIFO.
             wait until led = '0' for 100 * C_BIT;
-            assert led = '0' report "LD0 nie zgasla po oproznieniu FIFO" severity failure;
-            assert received < bytes_through(8)
-                report "LD0 czekala na zakonczenie ostatniego wydruku" severity failure;
+            assert led = '0' report "LD0 nie zgasla po zwolnieniu miejsca w FIFO" severity failure;
+            assert received = bytes_through(4)
+                report "LD0 czekala na wydruk znakow z FIFO" severity failure;
+            check_display(x"46");
             wait until received = bytes_through(8) for C_TIMEOUT;
             assert received = bytes_through(8) report "Blad danych po przepelnieniu" severity failure;
             wait for 2 * C_BIT;
