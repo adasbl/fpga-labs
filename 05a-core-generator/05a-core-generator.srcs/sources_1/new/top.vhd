@@ -6,7 +6,6 @@ use ieee.numeric_std.all;
 -- Bez resetu: wartosci poczatkowe sa ladowane przy konfiguracji FPGA.
 entity top is
     generic (
-        G_BAUD     : positive := 9600;
         G_SCAN_DIV : positive := 100000
     );
     port (
@@ -44,7 +43,7 @@ architecture Behavioral of top is
         );
     end component;
 
-    constant C_BIT_TICKS  : positive := (100000000 + G_BAUD / 2) / G_BAUD;
+    constant C_BIT_TICKS  : positive := 10417; -- 100 MHz / 9600 bps.
     constant C_HALF_TICKS : positive := C_BIT_TICKS / 2;
     constant C_LINE_MAX   : positive := 18;
 
@@ -121,7 +120,6 @@ architecture Behavioral of top is
         end case;
     end function;
 begin
-    assert C_BIT_TICKS >= 8 report "Za malo taktow na bit UART" severity failure;
     TXD_o <= tx_frame(0);
     ld0 <= overflow;
 

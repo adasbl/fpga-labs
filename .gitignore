@@ -24,4 +24,12 @@
 *.ltx
 *.rpt
 
+# New IP: keep configuration; setup_ip.tcl recreates generated products.
+05a-core-generator/05a-core-generator.srcs/sources_1/ip/fifo_mem/*
+!05a-core-generator/05a-core-generator.srcs/sources_1/ip/fifo_mem/fifo_mem.xci
+05b-lissajous-generator/05b-lissajous-generator.srcs/sources_1/ip/singen/*
+!05b-lissajous-generator/05b-lissajous-generator.srcs/sources_1/ip/singen/singen.xci
+05b-lissajous-generator/05b-lissajous-generator.srcs/sources_1/ip/video_mem/*
+!05b-lissajous-generator/05b-lissajous-generator.srcs/sources_1/ip/video_mem/video_mem.xci
+
 # Keep HDL sources, constraints, project files, Tcl scripts and .wcfg files.

@@ -1,13 +1,13 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.1 (win64) Build 2552052 Fri May 24 14:49:42 MDT 2019
--- Date        : Sat Oct 17 23:48:57 2026
+-- Date        : Sun Oct 25 11:09:08 2026
 -- Host        : LAPTOP-A70MCDSC running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode synth_stub
---               d:/puc_lab/project_2/project_2.srcs/sources_1/ip/char_mem/char_mem_stub.vhdl
+--               D:/fpga-labs/05a-core-generator/05a-core-generator.srcs/sources_1/ip/char_mem/char_mem_stub.vhdl
 -- Design      : char_mem
 -- Purpose     : Stub declaration of top-level module interface
--- Device      : xc7a12tcpg238-3
+-- Device      : xc7a100tcsg324-1
 -- --------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;

@@ -64,15 +64,13 @@ architecture Behavioral of top is
     signal freq_x : std_logic_vector(15 downto 0) := x"0100";
     signal freq_y : std_logic_vector(15 downto 0) := x"0100";
     signal phase_y : std_logic_vector(15 downto 0) := x"4000"; -- pi/2
-    signal request_config : boolean := true;
+    signal request_config : boolean := false;
     signal request_clear : boolean := false;
     signal config_word_x, config_word_y : std_logic_vector(31 downto 0) := (others => '0');
 
-    type control_t is (CLEAR_SCREEN, SNAPSHOT, RELEASE_DDS,
-                       CONFIG_X, CONFIG_Y, APPLY_CONFIG, RESET_DDS, DRAW);
+    type control_t is (CLEAR_SCREEN, SNAPSHOT, CONFIG_X, CONFIG_Y, DRAW);
     signal control_state : control_t := CLEAR_SCREEN;
     signal clear_address : natural range 0 to C_PIXELS - 1 := 0;
-    signal wait_count : natural range 0 to 63 := 0;
     signal screen_ready : std_logic := '0';
 
     signal dds_resetn : std_logic;
@@ -146,20 +144,11 @@ begin
     config_valid <= '1' when control_state = CONFIG_X or control_state = CONFIG_Y else '0';
     config_last <= '1' when control_state = CONFIG_Y else '0';
     config_data <= config_word_y when control_state = CONFIG_Y else config_word_x;
-    dds_resetn <= '0' when control_state = CLEAR_SCREEN or control_state = RESET_DDS else '1';
+    -- DDS jest resetowany podczas czyszczenia ekranu (start oraz BTND).
+    -- Sam wpis czestotliwosci lub fazy nie resetuje akumulatorow.
+    dds_resetn <= '0' when control_state = CLEAR_SCREEN else '1';
 
     p_control : process(clk_i)
-        -- Wspolny licznik opoznien DDS. Procedura nie zatrzymuje zegara:
-        -- jest wywolywana raz na zbocze, dopoki automat czeka w danym stanie.
-        procedure wait_cycles(ticks : positive; next_state : control_t) is
-        begin
-            if wait_count = ticks - 1 then
-                wait_count <= 0;
-                control_state <= next_state;
-            else
-                wait_count <= wait_count + 1;
-            end if;
-        end procedure;
     begin
         if rising_edge(clk_i) then
             case control_state is
@@ -167,7 +156,7 @@ begin
                     if clear_address = C_PIXELS - 1 then
                         -- Ostatni piksel jest zerowany na tym zboczu RAM.
                         screen_ready <= '1';
-                        control_state <= SNAPSHOT;
+                        control_state <= DRAW;
                     else
                         clear_address <= clear_address + 1;
                     end if;
@@ -175,18 +164,9 @@ begin
                     config_word_x <= x"0000" & freq_x;
                     config_word_y <= phase_y & freq_y;
                     request_config <= false;
-                    wait_count <= 0;
-                    control_state <= RELEASE_DDS;
-                when RELEASE_DDS =>
-                    wait_cycles(4, CONFIG_X);
+                    control_state <= CONFIG_X;
                 when CONFIG_X => control_state <= CONFIG_Y;
-                when CONFIG_Y =>
-                    wait_count <= 0;
-                    control_state <= APPLY_CONFIG;
-                when APPLY_CONFIG =>
-                    wait_cycles(32, RESET_DDS);
-                when RESET_DDS =>
-                    wait_cycles(4, DRAW);
+                when CONFIG_Y => control_state <= DRAW;
                 when DRAW =>
                     if request_clear then
                         request_clear <= false;
@@ -222,7 +202,7 @@ begin
     begin
         if rising_edge(clk_i) then
             plot_write <= '0';
-            if control_state /= DRAW then
+            if control_state = CLEAR_SCREEN then
                 next_is_y <= false;
             elsif dds_valid = '1' then
                 if not next_is_y then
