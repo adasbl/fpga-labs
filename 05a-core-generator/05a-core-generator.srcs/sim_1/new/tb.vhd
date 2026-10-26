@@ -436,13 +436,14 @@ begin
             wait until received = bytes_through(3) for C_TIMEOUT;
             assert received = bytes_through(3) report "Nie wydrukowano pierwszych linii" severity failure;
             wait for 2 * C_BIT;
-            assert led = '0' report "Przepelnienie przy mniej niz 64 wpisach" severity failure;
+            assert led = '0' report "LD0 swieci bez przepelnienia FIFO" severity failure;
 
             report "TEST: dokladnie 64 wpisy FIFO, potem 2 odrzucone" severity note;
             send_byte(rx, x"41", C_BIT);
             send_byte(rx, x"0D", C_BIT);
             wait for 2 * C_BIT;
             for i in 1 to 63 loop send_byte(rx, x"58", C_BIT); end loop;
+            assert led = '0' report "LD0 zapalila sie przed przepelnieniem FIFO" severity failure;
             send_byte(rx, x"0D", C_BIT); -- 64. wpis: Enter.
             assert led = '0' report "LD0 przed faktyczna utrata znaku" severity failure;
             send_byte(rx, x"45", C_BIT); -- E: odrzucony.
@@ -450,10 +451,18 @@ begin
             wait for 2 * C_BIT;
             assert led = '1' report "Brak sygnalizacji przepelnienia FIFO" severity failure;
             check_display(x"46");
+            wait until received = bytes_through(7) for C_TIMEOUT;
+            assert received = bytes_through(7) report "Nie wydrukowano linii przed ostatnia" severity failure;
+            assert led = '1' report "LD0 zgasla przed oproznieniem FIFO" severity failure;
+            -- Ostatnie 9 X i CR opuszczaja FIFO przed wydrukiem tej linii.
+            wait until led = '0' for 100 * C_BIT;
+            assert led = '0' report "LD0 nie zgasla po oproznieniu FIFO" severity failure;
+            assert received < bytes_through(8)
+                report "LD0 czekala na zakonczenie ostatniego wydruku" severity failure;
             wait until received = bytes_through(8) for C_TIMEOUT;
             assert received = bytes_through(8) report "Blad danych po przepelnieniu" severity failure;
             wait for 2 * C_BIT;
-            assert led = '0' report "LD0 nie zgasla po oproznieniu FIFO" severity failure;
+            assert led = '0' report "LD0 swieci przy pustym FIFO" severity failure;
 
             report "TEST: dalsza praca po przepelnieniu" severity note;
             send_byte(rx, x"5A", C_BIT);
