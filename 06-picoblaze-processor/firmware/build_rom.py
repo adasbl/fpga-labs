@@ -11,7 +11,7 @@ SOURCE = ROOT / "firmware/counter.psm"
 TARGET = ROOT / "06-picoblaze-processor.srcs/sources_1/new/counter_rom.vhd"
 OPCODES = {"load": 0x01000, "input": 0x09000, "output": 0x2D000,
            "and": 0x03000, "xor": 0x07000, "compare": 0x1D000,
-           "add": 0x11000, "sub": 0x19000}
+           "add": 0x11000, "sub": 0x19000, "test": 0x0D000}
 
 
 def assemble():
@@ -40,8 +40,10 @@ def assemble():
             code |= labels[args[-1]]
         elif op in OPCODES and len(args) == 2 and re.fullmatch(r"s[0-9a-f]", args[0]):
             code = OPCODES[op] | (int(args[0][1], 16) << 8)
-            if re.fullmatch(r"s[0-9a-f]", args[1]) and op not in ("input", "output"):
-                code = (code - 0x1000) | (int(args[1][1], 16) << 4)
+            register_pattern = r"\(s([0-9a-f])\)" if op in ("input", "output") else r"s([0-9a-f])"
+            register = re.fullmatch(register_pattern, args[1])
+            if register:
+                code = (code - 0x1000) | (int(register[1], 16) << 4)
             else:
                 value = int(args[1], 16)
                 if not 0 <= value <= 255:

@@ -1,25 +1,56 @@
-; PicoBlaze-6. INPUT 00 = debounced buttons, OUTPUT 01 = low display digit.
-; s0 = counter, s1 = previous buttons, s2 = current buttons, s3 = rising edges.
-; BTNL/BTNR are ignored in the basic version of exercise 6.
-        load s0, 00
+; INPUT 00: BTND, BTNU and BTNR levels in bits 0-2, short and long BTNL events in bits 3-4.
+; OUTPUT 02: selected digit in bits 0-1, edit mode in bit 2.
+; Ports 10-13 read and write digits from right to left.
+; s4 is the selected digit's port, s5 is 00 in display mode and 04 in edit mode.
         load s1, 00
-        output s0, 01
+        load s4, 10
+        load s5, 00
 poll:   input s2, 00
-        and s2, 03
         load s3, s1
         xor s3, FF
         and s3, s2
         load s1, s2
-        compare s2, 03
+
+        test s2, 10
+        jump nz, toggle_mode
+        compare s5, 00
+        jump z, poll
+        test s2, 08
+        jump nz, select_left
+        test s3, 04
+        jump nz, select_right
+
+        load s6, s2
+        and s6, 03
+        compare s6, 03
         jump z, poll          ; simultaneous up/down: do nothing
-        compare s3, 02
-        jump z, up
-        compare s3, 01
-        jump nz, poll
+        test s3, 02
+        jump nz, up
+        test s3, 01
+        jump z, poll
+        input s0, (s4)
         sub s0, 01
-        jump publish
-up:     add s0, 01
-publish:
-        and s0, 0F            ; wrap in both directions, only the lowest digit
-        output s0, 01
+        jump write_digit
+up:     input s0, (s4)
+        add s0, 01
+write_digit:
+        and s0, 0F            ; wrap the selected digit in both directions
+        output s0, (s4)
+        jump poll
+
+toggle_mode:
+        xor s5, 04
+        load s4, 10           ; start editing at the rightmost digit
+        jump write_control
+select_left:
+        add s4, 01
+        jump write_control
+select_right:
+        sub s4, 01
+write_control:
+        and s4, 03            ; wrap the selection across all four digits
+        load s6, s4
+        add s6, s5
+        add s4, 10
+        output s6, 02
         jump poll

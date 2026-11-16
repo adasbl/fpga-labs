@@ -1,10 +1,13 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity top is
     generic (
-        G_SCAN_DIV       : positive := 100000;  -- 1 ms at 100 MHz
-        G_DEBOUNCE_TICKS : positive := 1000000  -- 10 ms at 100 MHz
+        G_SCAN_DIV         : positive := 100000;    -- 1 ms at 100 MHz
+        G_DEBOUNCE_TICKS   : positive := 1000000;   -- 10 ms at 100 MHz
+        G_LONG_PRESS_TICKS : positive := 50000000;  -- 500 ms at 100 MHz
+        G_BLINK_TICKS      : positive := 25000000   -- 250 ms per phase at 100 MHz
     );
     port (
         clk_i      : in  std_logic;
@@ -20,11 +23,19 @@ architecture Behavioral of top is
     signal button_meta, button_sync, button_clean : std_logic_vector(3 downto 0) := (others => '0');
     type debounce_counts_t is array (0 to 3) of natural range 0 to G_DEBOUNCE_TICKS - 1;
     signal debounce_count : debounce_counts_t := (others => 0);
+    signal left_hold_count : natural range 0 to G_LONG_PRESS_TICKS := 0;
+    signal left_events : std_logic_vector(4 downto 3) := "00";
     signal address : std_logic_vector(11 downto 0);
     signal instruction : std_logic_vector(17 downto 0);
-    signal bram_enable, write_strobe : std_logic;
+    signal bram_enable, read_strobe, write_strobe : std_logic;
     signal port_id, in_port, out_port : std_logic_vector(7 downto 0);
-    signal display_value : std_logic_vector(3 downto 0) := x"0";
+
+    type digits_t is array (0 to 3) of std_logic_vector(3 downto 0);
+    signal display_values : digits_t := (others => x"0");
+    signal digit_port, control_write : boolean;
+    signal selected_digit : natural range 0 to 3 := 0;
+    signal edit_mode, blink_off : std_logic := '0';
+    signal blink_count : natural range 0 to G_BLINK_TICKS - 1 := 0;
     signal scan_count : natural range 0 to G_SCAN_DIV - 1 := 0;
     signal digit : natural range 0 to 3 := 0;
     attribute ASYNC_REG : string;
@@ -87,29 +98,81 @@ begin
         end if;
     end process;
 
+    -- A long press is reported once while held, a short press on release.
+    -- Events stay pending until the processor reads port 00.
+    p_left_button : process(clk_i)
+    begin
+        if rising_edge(clk_i) then
+            if rst_sync = '1' then
+                left_events <= "00";
+                left_hold_count <= 0;
+            else
+                if read_strobe = '1' and port_id = x"00" then
+                    left_events <= "00";
+                end if;
+
+                if button_clean(3) = '0' then
+                    if left_hold_count > 0 and left_hold_count < G_LONG_PRESS_TICKS then
+                        left_events(3) <= '1';
+                    end if;
+                    left_hold_count <= 0;
+                elsif left_hold_count < G_LONG_PRESS_TICKS then
+                    if left_hold_count = G_LONG_PRESS_TICKS - 1 then
+                        left_events(4) <= '1';
+                    end if;
+                    left_hold_count <= left_hold_count + 1;
+                end if;
+            end if;
+        end if;
+    end process;
+
     processor : entity work.kcpsm6
         generic map (hwbuild => x"00", interrupt_vector => x"3FF", scratch_pad_memory_size => 64)
         port map (
             address => address, instruction => instruction, bram_enable => bram_enable,
             in_port => in_port, out_port => out_port, port_id => port_id,
-            write_strobe => write_strobe, k_write_strobe => open, read_strobe => open,
+            write_strobe => write_strobe, k_write_strobe => open, read_strobe => read_strobe,
             interrupt => '0', interrupt_ack => open, sleep => '0', reset => rst_sync, clk => clk_i
         );
 
     program : entity work.counter_rom
         port map (clk => clk_i, enable => bram_enable, address => address, instruction => instruction);
 
-    -- INPUT 00: bit 3=BTNL, 2=BTNR, 1=BTNU, 0=BTND.
-    in_port <= "0000" & button_clean when port_id = x"00" else x"00";
+    -- Port 00 returns BTNL events and the other three button levels.
+    -- Ports 10-13 read and write the digits from right to left.
+    digit_port <= port_id(7 downto 2) = "000100";
+    control_write <= write_strobe = '1' and port_id = x"02";
+    in_port <= "000" & left_events & button_clean(2 downto 0) when port_id = x"00" else
+               "0000" & display_values(to_integer(unsigned(port_id(1 downto 0)))) when digit_port else
+               x"00";
 
-    -- OUTPUT 01: low digit. All counting is performed by PicoBlaze firmware.
     p_output : process(clk_i)
     begin
         if rising_edge(clk_i) then
             if rst_sync = '1' then
-                display_value <= x"0";
-            elsif write_strobe = '1' and port_id = x"01" then
-                display_value <= out_port(3 downto 0);
+                display_values <= (others => x"0");
+                selected_digit <= 0;
+                edit_mode <= '0';
+            elsif control_write then
+                selected_digit <= to_integer(unsigned(out_port(1 downto 0)));
+                edit_mode <= out_port(2);
+            elsif write_strobe = '1' and digit_port then
+                display_values(to_integer(unsigned(port_id(1 downto 0)))) <= out_port(3 downto 0);
+            end if;
+        end if;
+    end process;
+
+    p_blink : process(clk_i)
+    begin
+        if rising_edge(clk_i) then
+            if rst_sync = '1' or edit_mode = '0' or control_write then
+                blink_count <= 0;
+                blink_off <= '0';
+            elsif blink_count = G_BLINK_TICKS - 1 then
+                blink_count <= 0;
+                blink_off <= not blink_off;
+            else
+                blink_count <= blink_count + 1;
             end if;
         end if;
     end process;
@@ -131,14 +194,12 @@ begin
         end if;
     end process;
 
-    p_decode : process(digit, display_value)
-    begin
-        led7_seg_o <= hex_segments(x"0");
-        case digit is
-            when 0 => led7_an_o <= "1110"; led7_seg_o <= hex_segments(display_value);
-            when 1 => led7_an_o <= "1101";
-            when 2 => led7_an_o <= "1011";
-            when 3 => led7_an_o <= "0111";
-        end case;
-    end process;
+    with digit select led7_an_o <=
+        "1110" when 0,
+        "1101" when 1,
+        "1011" when 2,
+        "0111" when 3;
+
+    led7_seg_o <= x"FF" when edit_mode = '1' and digit = selected_digit and blink_off = '1' else
+                  hex_segments(display_values(digit));
 end architecture;
