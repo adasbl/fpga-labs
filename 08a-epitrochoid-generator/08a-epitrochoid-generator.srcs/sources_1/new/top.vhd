@@ -39,6 +39,21 @@ architecture behavioral of top is
         );
     end component;
 
+    component singen is
+        port (
+            aclk                            : in  std_logic;
+            aclken                          : in  std_logic;
+            aresetn                         : in  std_logic;
+            s_axis_config_tvalid            : in  std_logic;
+            s_axis_config_tdata             : in  phase_step_t;
+            s_axis_config_tlast             : in  std_logic;
+            m_axis_data_tvalid              : out std_logic;
+            m_axis_data_tdata               : out std_logic_vector(31 downto 0);
+            event_s_config_tlast_missing    : out std_logic;
+            event_s_config_tlast_unexpected : out std_logic
+        );
+    end component;
+
     type debounce_t is array (0 to 3) of natural range 0 to DEBOUNCE_CYCLES - 1;
     signal debounce_count : debounce_t := (others => 0);
     signal sw_meta, sw_sync : std_logic_vector(7 downto 0) := (others => '0');
@@ -93,7 +108,7 @@ begin
             doutb => read_data
         );
 
-    dds : entity work.singen
+    dds : singen
         port map (
             aclk => clk_i,
             aclken => '1',
