@@ -64,7 +64,7 @@ architecture Behavioral of top is
     signal fifo_empty : std_logic;
     signal fifo_wr_en : std_logic;
     signal fifo_rd_en : std_logic := '0';
-    signal overflow  : std_logic := '0';
+    signal overflow   : std_logic := '0';
 
     type line_t is array(0 to C_LINE_MAX - 1) of std_logic_vector(7 downto 0);
     signal line_buffer : line_t := (others => (others => '0'));
@@ -199,14 +199,14 @@ begin
         end if;
     end process;
 
-    -- Przy pelnym FIFO nowe znaki sa odrzucane; zachowujemy starsze.
-    -- LD0 zapala sie po faktycznej utracie znaku, gasnie po oproznieniu FIFO.
+    -- Jak w cw5a Christopha: LD0 zapala sie po utracie znaku
+    -- i gasnie, gdy FIFO przestaje byc pelne (zwalnia sie miejsce).
     p_overflow : process(clk_i)
     begin
         if rising_edge(clk_i) then
             if rx_valid = '1' and fifo_full = '1' then
                 overflow <= '1';
-            elsif fifo_empty = '1' then
+            elsif fifo_full = '0' then
                 overflow <= '0';
             end if;
         end if;
