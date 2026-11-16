@@ -33,3 +33,5 @@
 !05b-lissajous-generator/05b-lissajous-generator.srcs/sources_1/ip/video_mem/video_mem.xci
 
 # Keep HDL sources, constraints, project files, Tcl scripts and .wcfg files.
+
+/AGENTS.md
