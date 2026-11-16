@@ -1,0 +1,25 @@
+; PicoBlaze-6. INPUT 00 = debounced buttons, OUTPUT 01 = low display digit.
+; s0 = counter, s1 = previous buttons, s2 = current buttons, s3 = rising edges.
+; BTNL/BTNR are ignored in the basic version of exercise 6.
+        load s0, 00
+        load s1, 00
+        output s0, 01
+poll:   input s2, 00
+        and s2, 03
+        load s3, s1
+        xor s3, FF
+        and s3, s2
+        load s1, s2
+        compare s2, 03
+        jump z, poll          ; simultaneous up/down: do nothing
+        compare s3, 02
+        jump z, up
+        compare s3, 01
+        jump nz, poll
+        sub s0, 01
+        jump publish
+up:     add s0, 01
+publish:
+        and s0, 0F            ; wrap in both directions, only the lowest digit
+        output s0, 01
+        jump poll
