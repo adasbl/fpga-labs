@@ -27,7 +27,6 @@ static void enter_digit(Calculator *calc, int digit)
     int32_t magnitude = calc->x < 0 ? -calc->x : calc->x;
     magnitude = magnitude * 10 + digit;
     if (magnitude > MAX_MAGNITUDE) {
-        calc->error = true;
         return;
     }
     calc->x = calc->negative_entry ? -magnitude : magnitude;
@@ -77,6 +76,7 @@ bool calculator_key(Calculator *calc, uint8_t key)
     if (key == 'C' || key == 'c') {
         calc->x = 0;
         calc->entering = false;
+        calc->negative_entry = false;
         calc->lift_on_digit = false;
         calc->error = false;
         return true;
@@ -146,7 +146,8 @@ void calculator_display(const Calculator *calc, uint8_t segments[DISPLAY_DIGITS]
         magnitude /= 10;
         segments[digit] = magnitude ? digit_segments[magnitude % 10] : 0;
     }
-    segments[DISPLAY_DIGITS - 1] = calc->x < 0 ? 0x40 : 0;
+    bool show_minus = calc->x < 0 || (calc->entering && calc->negative_entry);
+    segments[DISPLAY_DIGITS - 1] = show_minus ? 0x40 : 0;
 }
 
 uint8_t calculator_leds(const Calculator *calc)
