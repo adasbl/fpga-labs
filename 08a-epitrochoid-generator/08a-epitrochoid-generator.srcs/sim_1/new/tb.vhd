@@ -80,29 +80,29 @@ begin
         check_pixel(320, 304, WHITE);
         check_pixel(650, 304, BLACK);
 
-        report "Epicycloid: f1 = 1, f2 = 3, A = 64, B = 32";
+        report "Epicycloid: f1 = 1, f2 = 3, A = 48, B = 16";
         press(BTNL, 1);
         press(BTNC, 3);
-        press(BTNR, 16#48#);
+        press(BTNR, 16#34#);
         redraw;
-        check_pixel(320, 144, WHITE);
-        check_pixel(320, 176, BLACK);
-        check_pixel(356, 235, WHITE);
+        check_pixel(320, 176, WHITE);
+        check_pixel(356, 238, WHITE);
         check_pixel(352, 240, WHITE);
+        check_pixel(384, 240, BLACK);
 
-        report "Curtate epicycloid: B = 16";
-        press(BTNR, 16#44#);
+        report "Curtate epicycloid: B = 8";
+        press(BTNR, 16#32#);
         redraw;
-        check_pixel(320, 144, BLACK);
-        check_pixel(320, 160, WHITE);
-        check_pixel(368, 240, WHITE);
+        check_pixel(320, 176, BLACK);
+        check_pixel(320, 184, WHITE);
+        check_pixel(360, 240, WHITE);
 
-        report "Prolate epicycloid: B = 48";
-        press(BTNR, 16#4C#);
+        report "Prolate epicycloid: B = 24";
+        press(BTNR, 16#36#);
         redraw;
-        check_pixel(320, 128, WHITE);
-        check_pixel(320, 160, BLACK);
-        check_pixel(336, 240, WHITE);
+        check_pixel(320, 168, WHITE);
+        check_pixel(320, 184, BLACK);
+        check_pixel(344, 240, WHITE);
 
         report "Rose: f1 = 1, f2 = 7, A = B = 48";
         press(BTNC, 7);
