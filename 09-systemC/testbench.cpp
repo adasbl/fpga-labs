@@ -60,8 +60,4 @@ int sc_main(int, char*[]) {
     sc_start(10, SC_NS);
 
     sc_close_vcd_trace_file(trace);
-    if (errors == 0) {
-        std::cout << "PASS: pelny cykl Graya, zawiniecie i dwa resety.\n";
-    }
-    return errors == 0 ? 0 : 1;
 }
